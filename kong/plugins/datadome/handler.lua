@@ -21,14 +21,14 @@ local plugin = {
 ------------------------------------- DATADOME SECTION --------------------------------------
 ---------------------------------------------------------------------------------------------
 local DATADOME_API_ENDPOINT = "api.datadome.co"
-local DATADOME_API_KEY = "YOU_DD_KEY_HERE"
+local DATADOME_API_KEY = ""
 local DATADOME_API_CONFIG = {
     --ssl = true,
     --port = 443,
     ssl = false,
     port = 80,
     path = "/validate-request",
-    timeout = 150,
+    timeout = 2500,
     uriRegex = "",
     uriRegexExclusion = "\\.avi|\\.flv|\\.mka|\\.mkv|\\.mov|\\.mp4|\\.mpeg|\\.mpg|\\.mp3|\\.flac|\\.ogg|\\.ogm|\\.opus|\\.wav|\\.webm|\\.webp|\\.bmp|\\.gif|\\.ico|\\.jpeg|\\.jpg|\\.png|\\.svg|\\.svgz|\\.swf|\\.eot|\\.otf|\\.ttf|\\.woff|\\.woff2|\\.css|\\.less|\\.js$"
 }

@@ -4,7 +4,7 @@ services:
   - name: my-service
     url: http://httpbin.org/anything
     plugins:
-      - name: kong-plugin-myplugin
+      - name: kong-plugin-datadome
     routes:
       - name: get-post-data
         methods: [GET, POST]
