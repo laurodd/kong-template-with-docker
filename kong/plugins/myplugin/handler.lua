@@ -48,6 +48,11 @@ local function getClientIdAndCookiesLength(request_headers)
   return clientId, len
 end
 
+local function getCurrentMicroTime()
+  -- we need time up to microseccconds, but at lua we can do up to seconds :( round it
+  return tostring(os.time()) .. "000000"
+end
+
 local function urlencode(str)
   if str then
     str = ngx.re.gsub(str, '\n', '\r\n', "io")
@@ -56,6 +61,10 @@ local function urlencode(str)
     end, "io")
   end
   return str
+end
+
+local function getAuthorizationLen(request_headers)
+  return string.len(request_headers["authorization"] or "")
 end
 
 local function stringify(params)
@@ -74,6 +83,14 @@ local function stringify(params)
     return table.concat(fields, '&')
   end
   return ''
+end
+
+local function getHeadersList(request_headers)
+  local headers = {}
+  for key, _ in pairs(request_headers) do
+      table.insert(headers, key)
+  end
+  return table.concat(headers, ",")
 end
 
 local function addResponseHeaders(api_response_headers)
@@ -185,11 +202,11 @@ function plugin:access(plugin_conf)
     ['APIConnectionState'] = 'new',
     ['IP']                 = ngx.var.remote_addr,
     ['Port']               = ngx.var.server_port,
-    ['TimeRequest']        = '0',--helpers.getCurrentMicroTime(),
+    ['TimeRequest']        = getCurrentMicroTime(),
     ['Protocol']           = string.len(ngx.var.https) == 0 and 'http' or 'https',
     ['Method']             = ngx.req.get_method(),
     ['Request']            = ngx.var.request_uri,
-    ['HeadersList']        = "headerlist",
+    ['HeadersList']        = getHeadersList(request_headers),
     ['Host']               = request_headers['host'],
     ['UserAgent']          = request_headers['user-agent'],
     ['Referer']            = request_headers['referer'],
@@ -209,7 +226,7 @@ function plugin:access(plugin_conf)
     ['Via']                = request_headers['via'],
     ['TrueClientIP']       = request_headers['true-client-ip'],
     ['CookiesLen']         = tostring(cookieLen),
-    --['AuthorizationLen']   = tostring(helpers.getAuthorizationLen(request_headers)),
+    ['AuthorizationLen']   = tostring(getAuthorizationLen(request_headers)),
     ['PostParamLen']       = request_headers['content-length'],
   }
 
