@@ -16,8 +16,7 @@ local schema = {
           -- a standard defined field (typedef), with some customizations
           { datadome_api_key = {
             type = "string",
-            required = true,
-            default = "DATADOME_API_KEY" } },
+            required = true } },
           { request_header = typedefs.header_name {
               required = true,
               default = "Hello-World" } },
