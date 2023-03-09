@@ -4,21 +4,6 @@ local plugin = {
 }
 
 ---------------------------------------------------------------------------------------------
-------------------------------------- DATADOME CONFIG ---------------------------------------
----------------------------------------------------------------------------------------------
-local DATADOME_API_ENDPOINT = "api.datadome.co"
-local DATADOME_API_CONFIG = {
-    --ssl = true,
-    --port = 443,
-    ssl = false,
-    port = 80,
-    path = "/validate-request",
-    timeout = 2500,
-    uriRegex = "",
-    uriRegexExclusion = "\\.avi|\\.flv|\\.mka|\\.mkv|\\.mov|\\.mp4|\\.mpeg|\\.mpg|\\.mp3|\\.flac|\\.ogg|\\.ogm|\\.opus|\\.wav|\\.webm|\\.webp|\\.bmp|\\.gif|\\.ico|\\.jpeg|\\.jpg|\\.png|\\.svg|\\.svgz|\\.swf|\\.eot|\\.otf|\\.ttf|\\.woff|\\.woff2|\\.css|\\.less|\\.js$"
-}
-
----------------------------------------------------------------------------------------------
 ----------------------------------- DATADOME FUNCTIONS --------------------------------------
 ---------------------------------------------------------------------------------------------
 local function getClientIdAndCookiesLength(request_headers)
@@ -207,11 +192,11 @@ function plugin:access(plugin_conf)
   end
 
 
-  local api_protocol = DATADOME_API_CONFIG.ssl and 'https://' or 'http://'
+  local api_protocol = plugin_conf.datadome_api_config_ssl and 'https://' or 'http://'
   local options = {
       method = "POST",
-      port = DATADOME_API_CONFIG.port,
-      ssl_verify = DATADOME_API_CONFIG.ssl,
+      port = plugin_conf.datadome_api_config_port,
+      ssl_verify = plugin_conf.datadome_api_config_ssl,
       keep_alive = true,
       body = stringify(body),
       headers = datadomeHeaders
@@ -219,8 +204,8 @@ function plugin:access(plugin_conf)
 
   -- call Datadome
   local httpc = require("resty.http").new()
-  httpc:set_timeout(DATADOME_API_CONFIG.timeout)
-  local res, err = httpc:request_uri(api_protocol .. DATADOME_API_ENDPOINT .. "/validate-request", options)
+  httpc:set_timeout(plugin_conf.datadome_api_config_timeout)
+  local res, err = httpc:request_uri(api_protocol .. plugin_conf.datadome_api_endpoint .. plugin_conf.datadome_api_config_path, options)
 
   -- check errors
   kong.log.debug("[LGR] ---------------------------------------")
