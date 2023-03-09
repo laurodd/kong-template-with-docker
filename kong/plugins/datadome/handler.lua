@@ -131,10 +131,7 @@ function plugin:access(plugin_conf)
 
 
   local request_headers = ngx.req.get_headers()
-  local clientId = ""
-  local cookieLen = 10
-  clientId, cookieLen = getClientIdAndCookiesLength(request_headers)
-
+  local clientId, cookieLen = getClientIdAndCookiesLength(request_headers)
 
   local body = {
     ['Key']                = plugin_conf.datadome_api_key,
