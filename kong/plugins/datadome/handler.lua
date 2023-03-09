@@ -119,6 +119,10 @@ local function addRequestHeaders(api_response_headers)
   end
 end
 
+local function addErrorHeader(value)
+  ngx.header['X-DataDome-Error'] = value
+end
+
 ---------------------------------------------------------------------------------------------
 -------------------------- DATADOME EXECUTION : access phase --------------------------------
 -- Executed for every request from a client and before it is being proxied to the upstream --
@@ -221,7 +225,7 @@ function plugin:access(plugin_conf)
       else
         kong.log.debug("[LGR] Error occurred while connecting to DataDome API. Check DataDome configuration "..err)
       end
-      --headers.addErrorHeader(err)
+      addErrorHeader(err)
       return
   else 
     kong.log.debug("[LGR] Error nil")
@@ -234,7 +238,7 @@ function plugin:access(plugin_conf)
   local api_response_headers = res.headers
   if api_response_headers then
     if tonumber(api_response_headers["X-DataDomeResponse"]) ~= status then
-      --headers.addErrorHeader("Invalid API Key")
+      addErrorHeader("Invalid API Key")
       kong.log.debug("[LGR] Invalid X-DataDomeResponse header, is it ApiServer response?")
       return
     else 
