@@ -17,6 +17,34 @@ local schema = {
           { datadome_api_key = {
             type = "string",
             required = true } },
+            { datadome_api_endpoint = {
+              type = "string",
+              required = true,
+              default = "api.datadome.co" } },
+            { datadome_api_config_ssl = {
+              type = "boolean",
+              required = true,
+              default = false } },
+            { datadome_api_config_port = {
+              type = "integer",
+              required = true,
+              default = 80 } },
+            { datadome_api_config_path = {
+              type = "string",
+              required = true,
+              default = "/validate-request" } },
+            { datadome_api_config_timeout = {
+              type = "integer",
+              required = true,
+              default = 250 } },
+            { datadome_api_config_uri_regex = {
+              type = "string",
+              required = true,
+              default = " " } },
+            { datadome_api_config_uri_regex_exclusion = {
+              type = "string",
+              required = true,
+              default = "\\.avi|\\.flv|\\.mka|\\.mkv|\\.mov|\\.mp4|\\.mpeg|\\.mpg|\\.mp3|\\.flac|\\.ogg|\\.ogm|\\.opus|\\.wav|\\.webm|\\.webp|\\.bmp|\\.gif|\\.ico|\\.jpeg|\\.jpg|\\.png|\\.svg|\\.svgz|\\.swf|\\.eot|\\.otf|\\.ttf|\\.woff|\\.woff2|\\.css|\\.less|\\.js$" } },
           { request_header = typedefs.header_name {
               required = true,
               default = "Hello-World" } },
@@ -32,9 +60,9 @@ local schema = {
         entity_checks = {
           -- add some validation rules across fields
           -- the following is silly because it is always true, since they are both required
-          { at_least_one_of = { "request_header", "response_header" }, },
+          --{ at_least_one_of = { "request_header", "response_header" }, },
           -- We specify that both header-names cannot be the same
-          { distinct = { "request_header", "response_header"} },
+          --{ distinct = { "request_header", "response_header"} },
         },
       },
     },

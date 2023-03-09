@@ -130,7 +130,12 @@ end
 
 function plugin:access(plugin_conf)
   kong.log.debug("[LGR] ---------------------------------------")
+  -- testing required config
   kong.log.debug("[LGR] API KEY FROM CONFIG = "..plugin_conf.datadome_api_key)
+  -- testing default config
+  kong.log.debug("[LGR] API ENDPOINT FROM CONFIG = "..plugin_conf.datadome_api_endpoint)
+  -- testing overriding default config
+  kong.log.debug("[LGR] API TIMEOUT FROM CONFIG = "..plugin_conf.datadome_api_config_timeout)
   kong.log.debug("[LGR] PHASE = "..ngx.get_phase())
   kong.log.debug("[LGR] ---------------------------------------")
   kong.log.debug("[LGR] ngx.req.get_headers")
