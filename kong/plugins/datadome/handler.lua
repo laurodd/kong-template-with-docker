@@ -7,7 +7,6 @@ local plugin = {
 ------------------------------------- DATADOME CONFIG ---------------------------------------
 ---------------------------------------------------------------------------------------------
 local DATADOME_API_ENDPOINT = "api.datadome.co"
-local DATADOME_API_KEY = ""
 local DATADOME_API_CONFIG = {
     --ssl = true,
     --port = 443,
@@ -127,6 +126,7 @@ end
 
 function plugin:access(plugin_conf)
   kong.log.debug("[LGR] ---------------------------------------")
+  kong.log.debug("[LGR] API KEY FROM CONFIG = "..plugin_conf.datadome_api_key)
   kong.log.debug("[LGR] PHASE = "..ngx.get_phase())
   kong.log.debug("[LGR] ---------------------------------------")
   kong.log.debug("[LGR] ngx.req.get_headers")
@@ -143,7 +143,7 @@ function plugin:access(plugin_conf)
 
 
   local body = {
-    ['Key']                = DATADOME_API_KEY,
+    ['Key']                = plugin_conf.datadome_api_key,
     ['RequestModuleName']  = 'Kong',
     ['ModuleVersion']      = '0.0.1',
     ['ServerName']         = ngx.var.hostname,

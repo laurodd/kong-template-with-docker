@@ -5,6 +5,8 @@ services:
     url: http://httpbin.org/anything
     plugins:
       - name: kong-plugin-datadome
+        config:
+          datadome_api_key: DATADOME_API_KEY_HERE
     routes:
       - name: get-post-data
         methods: [GET, POST]
