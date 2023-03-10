@@ -16,8 +16,8 @@ source = {
 }
 
 description = {
-  summary = "Kong is a scalable and customizable API Management Layer built on top of Nginx.",
-  homepage = "http://getkong.org",
+  summary = "Datadome Kong plugin detects and protects against bot activity",
+  homepage = "https://datadome.co/",
   license = "Apache 2.0"
 }
 
