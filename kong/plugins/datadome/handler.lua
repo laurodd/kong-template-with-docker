@@ -6,64 +6,20 @@ local plugin = {
 ---------------------------------------------------------------------------------------------
 ----------------------------------- DATADOME FUNCTIONS --------------------------------------
 ---------------------------------------------------------------------------------------------
-local function getClientIdAndCookiesLength(request_headers)
-  local cookie = request_headers["cookie"] or ""
-  local len = string.len(cookie)
-  local clientId = nil
-  if len > 0 then
-    for element in ngx.re.gmatch(cookie, "([^;= ]+)=([^;$]+)", "io") do
-      if element[1] == "datadome" then
-        clientId = element[2]
-        break
+
+local function addRequestHeaders(api_response_headers)
+  local request_headers = api_response_headers['X-DataDome-Request-Headers']
+
+  if request_headers == nil then
+      return
+  end
+
+  for header_name in ngx.re.gmatch(request_headers, "([^ ]+)", "io") do
+      local header_value = api_response_headers[header_name[0]]
+      if header_value ~= nil then
+          ngx.req.set_header(header_name[0], header_value)
       end
-    end
   end
-  return clientId, len
-end
-
-local function getCurrentMicroTime()
-  -- we need time up to microseccconds, but at lua we can do up to seconds :( round it
-  return tostring(os.time()) .. "000000"
-end
-
-local function urlencode(str)
-  if str then
-    str = ngx.re.gsub(str, '\n', '\r\n', "io")
-    str = ngx.re.gsub(str, '([^[:alnum:]-_.~])', function(c)
-                        return string.format('%%%02X', string.byte(c[0]))
-    end, "io")
-  end
-  return str
-end
-
-local function getAuthorizationLen(request_headers)
-  return string.len(request_headers["authorization"] or "")
-end
-
-local function stringify(params)
-  if type(params) == "table" then
-    local fields = {}
-    for key,value in pairs(params) do
-      local keyString = urlencode(tostring(key)) .. '='
-      if type(value) == "table" then
-        for _, v in ipairs(value) do
-          table.insert(fields, keyString .. urlencode(tostring(v)))
-        end
-      else
-        table.insert(fields, keyString .. urlencode(tostring(value)))
-      end
-    end
-    return table.concat(fields, '&')
-  end
-  return ''
-end
-
-local function getHeadersList(request_headers)
-  local headers = {}
-  for key, _ in pairs(request_headers) do
-      table.insert(headers, key)
-  end
-  return table.concat(headers, ",")
 end
 
 local function addResponseHeaders(api_response_headers)
@@ -89,23 +45,138 @@ local function addResponseHeaders(api_response_headers)
   end
 end
 
-local function addRequestHeaders(api_response_headers)
-  local request_headers = api_response_headers['X-DataDome-Request-Headers']
-
-  if request_headers == nil then
-      return
+local function checkStatusCodeAndUpdateHeaders(status, api_response_headers, api_response_body)
+  if status == 403 or status == 401 or status == 301 or status == 302 then
+    kong.log.debug("[LGR] STATUS CODE ERROR: "..status)
+    addResponseHeaders(api_response_headers)
+    ngx.status = status
+    ngx.say(api_response_body)
+    ngx.exit(status)
   end
 
-  for header_name in ngx.re.gmatch(request_headers, "([^ ]+)", "io") do
-      local header_value = api_response_headers[header_name[0]]
-      if header_value ~= nil then
-          ngx.req.set_header(header_name[0], header_value)
-      end
+  if status == 200 then
+    kong.log.debug("[LGR] STATUS CODE OK: "..status)
+    addRequestHeaders(api_response_headers)
+    addResponseHeaders(api_response_headers)
   end
 end
 
 local function addErrorHeader(value)
   ngx.header['X-DataDome-Error'] = value
+end
+
+local function isXDataDomeResponseDifferentStatusError(api_response_headers, status)
+  if api_response_headers then
+    if tonumber(api_response_headers["X-DataDomeResponse"]) ~= status then
+      addErrorHeader("Invalid API Key")
+      kong.log.debug("[LGR] Invalid X-DataDomeResponse header, is it ApiServer response?")
+      return true
+    else
+      kong.log.debug("[LGR] Valid X-DataDomeResponse header, code:"..status)
+    end
+  end
+  return false
+end
+
+local function isHttpError(err)
+  if err ~= nil then
+    if err == "timeout" then
+      kong.log.debug("[LGR] Timeout happened with connection to DataDome, skip request")
+    else
+      kong.log.debug("[LGR] Error occurred while connecting to DataDome API. Check DataDome configuration "..err)
+    end
+    addErrorHeader(err)
+    return true
+  else
+    kong.log.debug("[LGR] Error nil")
+  end
+  return false
+end
+
+local function isError(err, api_response_headers, status)
+  if isHttpError(err) or isXDataDomeResponseDifferentStatusError(api_response_headers, status) then
+    return true
+  else
+    return false
+  end
+end
+
+local function urlencode(str)
+  if str then
+    str = ngx.re.gsub(str, '\n', '\r\n', "io")
+    str = ngx.re.gsub(str, '([^[:alnum:]-_.~])', function(c)
+                        return string.format('%%%02X', string.byte(c[0]))
+    end, "io")
+  end
+  return str
+end
+
+local function stringify(params)
+  if type(params) == "table" then
+    local fields = {}
+    for key,value in pairs(params) do
+      local keyString = urlencode(tostring(key)) .. '='
+      if type(value) == "table" then
+        for _, v in ipairs(value) do
+          table.insert(fields, keyString .. urlencode(tostring(v)))
+        end
+      else
+        table.insert(fields, keyString .. urlencode(tostring(value)))
+      end
+    end
+    return table.concat(fields, '&')
+  end
+  return ''
+end
+
+local function callDatadome(plugin_conf,body,datadomeHeaders)
+  local datadome_api_protocol = plugin_conf.datadome_api_config_ssl and 'https://' or 'http://'
+  local options = {
+      method = plugin_conf.datadome_api_config_http_method,
+      port = plugin_conf.datadome_api_config_port,
+      ssl_verify = plugin_conf.datadome_api_config_ssl,
+      keep_alive = plugin_conf.datadome_api_config_use_keepalive,
+      body = stringify(body),
+      headers = datadomeHeaders
+  }
+
+  local httpc = require("resty.http").new()
+  httpc:set_timeout(plugin_conf.datadome_api_config_timeout)
+  local res, err = httpc:request_uri(datadome_api_protocol .. plugin_conf.datadome_api_endpoint .. plugin_conf.datadome_api_config_path, options)
+
+  return res, err
+end
+
+local function getAuthorizationLen(request_headers)
+  return string.len(request_headers["authorization"] or "")
+end
+
+local function getHeadersList(request_headers)
+  local headers = {}
+  for key, _ in pairs(request_headers) do
+      table.insert(headers, key)
+  end
+  return table.concat(headers, ",")
+end
+
+local function getCurrentMicroTime()
+  -- we need time up to microseccconds, but at lua we can do up to seconds :( round it
+  return tostring(os.time()) .. "000000"
+end
+
+local function getClientIdAndCookiesLength(request_headers)
+  local cookie = request_headers["cookie"] or ""
+  local len = string.len(cookie)
+  local clientId = nil
+  if len > 0 then
+    for element in ngx.re.gmatch(cookie, "([^;= ]+)=([^;$]+)", "io") do
+      if element[1] == "datadome" then
+        clientId = element[2]
+        break
+      end
+    end
+  end
+  return clientId, len
 end
 
 local function getBodyAndDatadomeHeaders(plugin_conf)
@@ -162,77 +233,6 @@ local function getBodyAndDatadomeHeaders(plugin_conf)
 
   return body,datadomeHeaders
 end
-
-local function callDatadome(plugin_conf,body,datadomeHeaders) 
-  local api_protocol = plugin_conf.datadome_api_config_ssl and 'https://' or 'http://'
-  local options = {
-      method = "POST",
-      port = plugin_conf.datadome_api_config_port,
-      ssl_verify = plugin_conf.datadome_api_config_ssl,
-      keep_alive = true,
-      body = stringify(body),
-      headers = datadomeHeaders
-  }
-
-  local httpc = require("resty.http").new()
-  httpc:set_timeout(plugin_conf.datadome_api_config_timeout)
-  local res, err = httpc:request_uri(api_protocol .. plugin_conf.datadome_api_endpoint .. plugin_conf.datadome_api_config_path, options)
-
-  return res, err
-end
-
-local function isHttpError(err)
-  if err ~= nil then
-    if err == "timeout" then
-      kong.log.debug("[LGR] Timeout happened with connection to DataDome, skip request")
-    else
-      kong.log.debug("[LGR] Error occurred while connecting to DataDome API. Check DataDome configuration "..err)
-    end
-    addErrorHeader(err)
-    return true
-  else 
-    kong.log.debug("[LGR] Error nil")
-  end
-  return false
-end
-
-local function isXDataDomeResponseDifferentStatusError(api_response_headers, status)
-  if api_response_headers then
-    if tonumber(api_response_headers["X-DataDomeResponse"]) ~= status then
-      addErrorHeader("Invalid API Key")
-      kong.log.debug("[LGR] Invalid X-DataDomeResponse header, is it ApiServer response?")
-      return true
-    else 
-      kong.log.debug("[LGR] Valid X-DataDomeResponse header, code:"..status)
-    end
-  end
-  return false
-end
-
-local function isError(err, api_response_headers, status)
-  if isHttpError(err) or isXDataDomeResponseDifferentStatusError(api_response_headers, status) then
-    return true
-  else
-    return false
-  end
-end
-
-local function checkStatusCodeAndUpdateHeaders(status, api_response_headers, api_response_body)
-  if status == 403 or status == 401 or status == 301 or status == 302 then
-    kong.log.debug("[LGR] STATUS CODE ERROR: "..status)
-    addResponseHeaders(api_response_headers)
-    ngx.status = status
-    ngx.say(api_response_body)
-    ngx.exit(status)
-  end
-
-  if status == 200 then
-    kong.log.debug("[LGR] STATUS CODE OK: "..status)
-    addRequestHeaders(api_response_headers)
-    addResponseHeaders(api_response_headers)
-  end
-end
-
 
 ---------------------------------------------------------------------------------------------
 -------------------------- DATADOME EXECUTION : access phase --------------------------------
