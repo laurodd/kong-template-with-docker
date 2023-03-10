@@ -228,6 +228,17 @@ local function getBodyAndDatadomeHeaders(plugin_conf)
     ['Via']                = request_headers['via'],
     ['TrueClientIP']       = request_headers['true-client-ip'],
     ['PostParamLen']       = request_headers['content-length'],
+    ['SecCHUA']            = request_headers['Sec-CH-UA'],
+    ['SecCHUAArch']        = request_headers['Sec-CH-UA-Arch'],
+    ['SecCHUAFullVersionList'] = request_headers['Sec-CH-UA-Full-Version-List'],
+    ['SecCHUAModel']       = request_headers['Sec-CH-UA-Model'],
+    ['SecCHUAPlatform']    = request_headers['Sec-CH-UA-Platform'],
+    ['SecCHUAMobile']      = request_headers['Sec-CH-UA-Mobile'],
+    ['SecCHDeviceMemory']  = request_headers['Sec-CH-Device-Memory'],
+    ['SecFetchDest']       = request_headers['Sec-Fetch-Dest'],
+    ['SecFetchMode']       = request_headers['Sec-Fetch-Mode'],
+    ['SecFetchSite']       = request_headers['Sec-Fetch-Site'],
+    ['SecFetchUser']       = request_headers['Sec-Fetch-User'],
   }
 
   local datadomeHeaders = {
