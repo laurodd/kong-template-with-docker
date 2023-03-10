@@ -181,7 +181,7 @@ local function callDatadome(plugin_conf,body,datadomeHeaders)
   return res, err
 end
 
-local function isError(err)
+local function isHttpError(err)
   if err ~= nil then
     if err == "timeout" then
       kong.log.debug("[LGR] Timeout happened with connection to DataDome, skip request")
@@ -196,7 +196,7 @@ local function isError(err)
   return false
 end
 
-local function isXDataDomeResponseDifferentStatus(api_response_headers, status)
+local function isXDataDomeResponseDifferentStatusError(api_response_headers, status)
   if api_response_headers then
     if tonumber(api_response_headers["X-DataDomeResponse"]) ~= status then
       addErrorHeader("Invalid API Key")
@@ -207,6 +207,14 @@ local function isXDataDomeResponseDifferentStatus(api_response_headers, status)
     end
   end
   return false
+end
+
+local function isError(err, api_response_headers, status)
+  if isHttpError(err) or isXDataDomeResponseDifferentStatusError(api_response_headers, status) then
+    return true
+  else
+    return false
+  end
 end
 
 local function checkStatusCodeAndUpdateHeaders(status, api_response_headers, api_response_body)
@@ -224,6 +232,8 @@ local function checkStatusCodeAndUpdateHeaders(status, api_response_headers, api
     addResponseHeaders(api_response_headers)
   end
 end
+
+
 ---------------------------------------------------------------------------------------------
 -------------------------- DATADOME EXECUTION : access phase --------------------------------
 -- Executed for every request from a client and before it is being proxied to the upstream --
@@ -237,117 +247,12 @@ function plugin:access(plugin_conf)
   local api_response_headers = res.headers
   local api_response_body = res.body
 
-  if isError(err) then
-    return
-  end
-
-  if isXDataDomeResponseDifferentStatus(api_response_headers, status) then
+  if isError(err, api_response_headers, status) then
     return
   end
 
   checkStatusCodeAndUpdateHeaders(status, api_response_headers, api_response_body);
 
 end
-
-  --[[
-  kong.log.debug("[LGR] ---------------------------------------")
-  -- testing required config
-  kong.log.debug("[LGR] API KEY FROM CONFIG = "..plugin_conf.datadome_api_key)
-  -- testing default config
-  kong.log.debug("[LGR] API ENDPOINT FROM CONFIG = "..plugin_conf.datadome_api_endpoint)
-  -- testing overriding default config
-  kong.log.debug("[LGR] API TIMEOUT FROM CONFIG = "..plugin_conf.datadome_api_config_timeout)
-  kong.log.debug("[LGR] PHASE = "..ngx.get_phase())
-  kong.log.debug("[LGR] ---------------------------------------")
-  kong.log.debug("[LGR] ngx.req.get_headers")
-  kong.log.debug("[LGR] ---------------------------------------")
-  for key, valeur in pairs(ngx.req.get_headers()) do
-    kong.log.debug("[LGR] "..key.." "..valeur)
-  end
-  
-  local body, datadomeHeaders = getBodyAndDatadomeHeaders(plugin_conf)
-
-  kong.log.debug("[LGR] ---------------------------------------")
-  kong.log.debug("[LGR] body")
-  kong.log.debug("[LGR] ---------------------------------------")
-  for k, v in pairs(body) do
-    kong.log.debug("[LGR] ",k, "=", v);
-  end
-  kong.log.debug("[LGR] ---------------------------------------")
-  kong.log.debug("[LGR] datadomeHeaders ")
-  for k, v in pairs(datadomeHeaders) do
-    kong.log.debug("[LGR] ",k, "=", v);
-  end
-  kong.log.debug("[LGR] ---------------------------------------")
-
-  local api_protocol = plugin_conf.datadome_api_config_ssl and 'https://' or 'http://'
-  local options = {
-      method = "POST",
-      port = plugin_conf.datadome_api_config_port,
-      ssl_verify = plugin_conf.datadome_api_config_ssl,
-      keep_alive = true,
-      body = stringify(body),
-      headers = datadomeHeaders
-  }
-
-  -- call Datadome
-  local httpc = require("resty.http").new()
-  httpc:set_timeout(plugin_conf.datadome_api_config_timeout)
-  local res, err = httpc:request_uri(api_protocol .. plugin_conf.datadome_api_endpoint .. plugin_conf.datadome_api_config_path, options)
-  
-
-  local res, err = callDatadome(plugin_conf,body,datadomeHeaders)
-
-  ]]
-
-  --[[
-  kong.log.debug("[LGR] ---------------------------------------")
-  if err ~= nil then
-      if err == "timeout" then
-        kong.log.debug("[LGR] Timeout happened with connection to DataDome, skip request")
-      else
-        kong.log.debug("[LGR] Error occurred while connecting to DataDome API. Check DataDome configuration "..err)
-      end
-      addErrorHeader(err)
-      return
-  else 
-    kong.log.debug("[LGR] Error nil")
-  end
-
-
-  -- check response
-  local status = res.status
-  kong.log.debug("[LGR] status ="..status)
-
-  local api_response_headers = res.headers
-
-
-  if api_response_headers then
-    if tonumber(api_response_headers["X-DataDomeResponse"]) ~= status then
-      addErrorHeader("Invalid API Key")
-      kong.log.debug("[LGR] Invalid X-DataDomeResponse header, is it ApiServer response?")
-      return
-    else 
-      kong.log.debug("[LGR] Valid X-DataDomeResponse header, code:"..status)
-    end
-  end   
-
-  if status == 403 or status == 401 or status == 301 or status == 302 then
-    kong.log.debug("[LGR] STATUS CODE ERROR: "..status)
-    addResponseHeaders(api_response_headers)
-    ngx.status = status
-    ngx.say(res.body)
-    ngx.exit(status)
-  end
-
-  kong.log.debug("[LGR] AFTER 403 "..status)
-
-  if status == 200 then
-    kong.log.debug("[LGR] STATUS CODE OK: "..status)
-    addRequestHeaders(api_response_headers)
-    addResponseHeaders(api_response_headers)
-  end
-  
-end ]]
 
 return plugin
