@@ -71,7 +71,7 @@ local function addErrorHeader(value)
   ngx.header['X-DataDome-Error'] = value
 end
 
-local function isXDataDomeResponseDifferentStatusError(api_response_headers, status)
+local function isXDataDomeResponseError(api_response_headers, status)
   if api_response_headers then
     if tonumber(api_response_headers["X-DataDomeResponse"]) ~= status then
       addErrorHeader("Invalid API Key")
@@ -100,7 +100,7 @@ local function isHttpError(err)
 end
 
 local function isError(err, api_response_headers, status)
-  if isHttpError(err) or isXDataDomeResponseDifferentStatusError(api_response_headers, status) then
+  if isHttpError(err) or isXDataDomeResponseError(api_response_headers, status) then
     return true
   else
     return false
