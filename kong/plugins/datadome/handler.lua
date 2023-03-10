@@ -7,6 +7,12 @@ local plugin = {
 ----------------------------------- DATADOME FUNCTIONS --------------------------------------
 ---------------------------------------------------------------------------------------------
 
+local datadome_constants = {
+  module_name = "Kong",
+  module_version = "0.0.1",
+  api_connection_state = "new",
+}
+
 local function addRequestHeaders(api_response_headers)
   local request_headers = api_response_headers['X-DataDome-Request-Headers']
 
@@ -182,20 +188,27 @@ end
 local function getBodyAndDatadomeHeaders(plugin_conf)
   local request_headers = ngx.req.get_headers()
   local clientId, cookieLen = getClientIdAndCookiesLength(request_headers)
+  cookieLen = tostring(cookieLen)
+  local time_request = getCurrentMicroTime()
+  local headers_list = getHeadersList(request_headers)
+  local authorization_length = tostring(getAuthorizationLen(request_headers))
+  local protocol = string.len(ngx.var.https) == 0 and 'http' or 'https'
 
   local body = {
     ['Key']                = plugin_conf.datadome_api_key,
-    ['RequestModuleName']  = 'Kong',
-    ['ModuleVersion']      = '0.0.1',
+    ['RequestModuleName']  = datadome_constants.module_name,
+    ['ModuleVersion']      = datadome_constants.module_version,
+    ['APIConnectionState'] = datadome_constants.api_connection_state,
+    ['TimeRequest']        = time_request,
+    ['Protocol']           = protocol,
+    ['HeadersList']        = headers_list,
+    ['CookiesLen']         = cookieLen,
+    ['AuthorizationLen']   = authorization_length,
+    ['Method']             = ngx.req.get_method(),
     ['ServerName']         = ngx.var.hostname,
-    ['APIConnectionState'] = 'new',
     ['IP']                 = ngx.var.remote_addr,
     ['Port']               = ngx.var.server_port,
-    ['TimeRequest']        = getCurrentMicroTime(),
-    ['Protocol']           = string.len(ngx.var.https) == 0 and 'http' or 'https',
-    ['Method']             = ngx.req.get_method(),
     ['Request']            = ngx.var.request_uri,
-    ['HeadersList']        = getHeadersList(request_headers),
     ['Host']               = request_headers['host'],
     ['UserAgent']          = request_headers['user-agent'],
     ['Referer']            = request_headers['referer'],
@@ -214,8 +227,6 @@ local function getBodyAndDatadomeHeaders(plugin_conf)
     ['X-Real-IP']          = request_headers['x-real-ip'],
     ['Via']                = request_headers['via'],
     ['TrueClientIP']       = request_headers['true-client-ip'],
-    ['CookiesLen']         = tostring(cookieLen),
-    ['AuthorizationLen']   = tostring(getAuthorizationLen(request_headers)),
     ['PostParamLen']       = request_headers['content-length'],
   }
 
