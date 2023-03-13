@@ -13,6 +13,43 @@ local datadome_constants = {
   api_connection_state = "new",
 }
 
+local headers_truncation_size = {
+  ['SecCHDeviceMemory'] = 8,
+  ['SecCHUAMobile'] = 8,
+  ['SecFetchUser'] = 8,
+  ['SecCHUAArch'] = 16,
+  ['SecCHUAPlatform'] = 32,
+  ['SecFetchDest'] = 32,
+  ['SecFetchMode'] = 32,
+  ['SecFetchSite'] = 64,
+  ['AcceptCharset'] = 128,
+  ['AcceptEncoding'] = 128,
+  ['CacheControl'] = 128,
+  ['ClientId'] = 128,
+  ['Connection'] = 128,
+  ['ContentType'] = 128,
+  ['From'] = 128,
+  ['Pragma'] = 128,
+  ['SecCHUA'] = 128,
+  ['SecCHUAModel'] = 128,
+  ['TrueClientIP'] = 128,
+  ['X-Real-IP'] = 128,
+  ['X-Requested-With'] = 128,
+  ['AcceptLanguage'] = 256,
+  ['SecCHUAFullVersionList'] = 256,
+  ['Via'] = 256,
+  ['Accept'] = 512,
+  ['HeadersList'] = 512,
+  ['Origin'] = 512,
+  ['ServerName'] = 512,
+  ['ServerHostname'] = 512,
+  ['Host']  = 512,
+  ['XForwardedForIP'] = -512,
+  ['UserAgent'] = 768,
+  ['Referer'] = 1024,
+  ['Request'] = 2048,
+}
+
 local function addRequestHeaders(api_response_headers)
   local request_headers = api_response_headers['X-DataDome-Request-Headers']
 
@@ -153,6 +190,18 @@ local function callDatadome(plugin_conf,body,datadomeHeaders)
   return res, err
 end
 
+local function truncateHeaders(body)
+  for header, truncation_size in pairs (headers_truncation_size) do
+      if body[header] then
+          if truncation_size > 0 then
+              body[header] = string.sub(body[header],1,truncation_size)
+          else  -- backward truncation
+              body[header] = string.sub(body[header],truncation_size)
+          end
+      end
+  end
+end
+
 local function getAuthorizationLen(request_headers)
   return string.len(request_headers["authorization"] or "")
 end
@@ -252,6 +301,8 @@ local function getBodyAndDatadomeHeaders(plugin_conf)
   else
       body['ClientID'] = clientId
   end
+
+  truncateHeaders(body)
 
   return body,datadomeHeaders
 end
