@@ -11,6 +11,8 @@ local datadome_constants = {
   module_name = "Kong",
   module_version = "0.0.1",
   api_connection_state = "new",
+  datadome_api_http_method = "POST",
+  datadome_api_path = "/validate-request",
 }
 
 local headers_truncation_size = {
@@ -174,9 +176,10 @@ end
 
 local function callDatadome(plugin_conf,body,datadomeHeaders)
   local datadome_api_protocol = plugin_conf.datadome_api_config_ssl and 'https://' or 'http://'
+  local datadome_api_port = plugin_conf.datadome_api_config_ssl and 443 or 80
   local options = {
-      method = plugin_conf.datadome_api_config_http_method,
-      port = plugin_conf.datadome_api_config_port,
+      method = datadome_constants.datadome_api_http_method,
+      port = datadome_api_port,
       ssl_verify = plugin_conf.datadome_api_config_ssl,
       keep_alive = plugin_conf.datadome_api_config_use_keepalive,
       body = stringify(body),
@@ -185,7 +188,7 @@ local function callDatadome(plugin_conf,body,datadomeHeaders)
 
   local httpc = require("resty.http").new()
   httpc:set_timeout(plugin_conf.datadome_api_config_timeout)
-  local res, err = httpc:request_uri(datadome_api_protocol .. plugin_conf.datadome_api_endpoint .. plugin_conf.datadome_api_config_path, options)
+  local res, err = httpc:request_uri(datadome_api_protocol .. plugin_conf.datadome_api_endpoint .. datadome_constants.datadome_api_path, options)
 
   return res, err
 end

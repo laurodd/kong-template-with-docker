@@ -8,6 +8,7 @@ services:
         config:
           datadome_api_key: DATADOME_API_KEY_HERE
           datadome_api_config_timeout: 300
+          datadome_api_config_ssl: false
     routes:
       - name: get-post-data
         methods: [GET, POST]
