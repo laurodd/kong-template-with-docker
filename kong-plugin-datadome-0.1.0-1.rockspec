@@ -11,7 +11,7 @@ local pluginName = package:match("^kong%-plugin%-(.+)$")  -- "datadome"
 
 supported_platforms = {"linux", "macosx"}
 source = {
-  url = "https://github.com/laurodd/kong-template-with-docker",
+  url = "https://github.com/laurodd/kong-template-with-docker.git",
   tag = "0.1.0"
 }
 
